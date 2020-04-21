@@ -144,19 +144,16 @@ const use_google_bot = [
     'kansascity.com',
 ]
 
-function setDefaultOptions()
-{
+function setDefaultOptions() {
     let initSites = defaultSites;
     // Disable Daily Average User tracking by default on FF
-    if (typeof browser === 'object' && extension_api === browser)
-    {
+    if (typeof browser === 'object' && extension_api === browser) {
         Object.keys(initSites).forEach(key => initSites[key] === 'allowDAU' && delete initSites[key]);
     }
 
     extension_api.storage.sync.set({
         sites: initSites,
-    }, function ()
-    {
+    }, function () {
         extension_api.runtime.openOptionsPage();
     });
 }
@@ -192,31 +189,24 @@ let enabledSites = [];
 // Get the enabled sites
 extension_api.storage.sync.get({
     sites: {}
-}, function (items)
-{
+}, function (items) {
     let sites = items.sites;
-    enabledSites = Object.keys(items.sites).map(function (key)
-    {
+    enabledSites = Object.keys(items.sites).map(function (key) {
         return items.sites[key];
     });
-    if (extension_api === chrome)
-    {
+    if (extension_api === chrome) {
         init_GA();
     }
 });
 
 // Listen for changes to options
-extension_api.storage.onChanged.addListener(function (changes, namespace)
-{
+extension_api.storage.onChanged.addListener(function (changes, namespace) {
     let key;
-    for (key in changes)
-    {
+    for (key in changes) {
         let storageChange = changes[key];
-        if (key === 'sites')
-        {
+        if (key === 'sites') {
             let sites = storageChange.newValue;
-            enabledSites = Object.keys(sites).map(function (key)
-            {
+            enabledSites = Object.keys(sites).map(function (key) {
                 return sites[key];
             });
         }
@@ -224,14 +214,10 @@ extension_api.storage.onChanged.addListener(function (changes, namespace)
 });
 
 // Set and show default options on install
-extension_api.runtime.onInstalled.addListener(function (details)
-{
-    if (details.reason === "install")
-    {
+extension_api.runtime.onInstalled.addListener(function (details) {
+    if (details.reason === "install") {
         setDefaultOptions();
-    }
-    else if (details.reason === "update")
-    {
+    } else if (details.reason === "update") {
         // User updated extension
     }
 });
@@ -239,16 +225,13 @@ extension_api.runtime.onInstalled.addListener(function (details)
 extension_api.tabs.onUpdated.addListener(updateBadge);
 extension_api.tabs.onActivated.addListener(updateBadge);
 
-function updateBadge()
-{
+function updateBadge() {
     extension_api.tabs.query({
         active: true,
         currentWindow: true
-    }, function (arrayOfTabs)
-    {
+    }, function (arrayOfTabs) {
         let activeTab = arrayOfTabs[0];
-        if (!activeTab)
-        {
+        if (!activeTab) {
             return;
         }
         let badgeText = getBadgeText(activeTab.url);
@@ -257,8 +240,7 @@ function updateBadge()
     });
 }
 
-function getBadgeText(currentUrl)
-{
+function getBadgeText(currentUrl) {
     return currentUrl && isSiteEnabled({url: currentUrl}) ? 'ON' : '';
 }
 
@@ -288,13 +270,10 @@ function getBadgeText(currentUrl)
  **/
 
 // Disable javascript for these sites
-extension_api.webRequest.onBeforeRequest.addListener(function (details)
-    {
-        if (!isSiteEnabled(details) && !enabledSites.some(function (enabledSite)
-        {
+extension_api.webRequest.onBeforeRequest.addListener(function (details) {
+        if (!isSiteEnabled(details) && !enabledSites.some(function (enabledSite) {
             return enabledSite.indexOf("generalpaywallbypass") !== -1
-        }))
-        {
+        })) {
             return;
         }
         return {cancel: true};
@@ -313,33 +292,26 @@ extension_api.webRequest.onBeforeRequest.addListener(function (details)
 );
 
 let extraInfoSpec = ['blocking', 'requestHeaders'];
-if (extension_api.webRequest.OnBeforeSendHeadersOptions.hasOwnProperty('EXTRA_HEADERS'))
-{
+if (extension_api.webRequest.OnBeforeSendHeadersOptions.hasOwnProperty('EXTRA_HEADERS')) {
     extraInfoSpec.push('extraHeaders');
 }
 
-extension_api.webRequest.onBeforeSendHeaders.addListener(function (details)
-{
+extension_api.webRequest.onBeforeSendHeaders.addListener(function (details) {
     let requestHeaders = details.requestHeaders;
 
     let header_referer = '';
-    for (let n in requestHeaders)
-    {
-        if (requestHeaders[n].name.toLowerCase() === 'referer')
-        {
+    for (let n in requestHeaders) {
+        if (requestHeaders[n].name.toLowerCase() === 'referer') {
             header_referer = requestHeaders[n].value;
 
         }
     }
 
     // remove cookies for sites medium platform (mainfest.json needs in permissions: <all_urls>)
-    if (isSiteEnabled({url: '.medium.com'}) && details.url.indexOf('cdn-client.medium.com') !== -1 && header_referer.indexOf('.medium.com') === -1)
-    {
+    if (isSiteEnabled({url: '.medium.com'}) && details.url.indexOf('cdn-client.medium.com') !== -1 && header_referer.indexOf('.medium.com') === -1) {
         let domainVar = new URL(header_referer).hostname;
-        extension_api.cookies.getAll({domain: domainVar}, function (cookies)
-        {
-            for (let i = 0; i < cookies.length; i++)
-            {
+        extension_api.cookies.getAll({domain: domainVar}, function (cookies) {
+            for (let i = 0; i < cookies.length; i++) {
                 extension_api.cookies.remove({
                     url: (cookies[i].secure ? "https://" : "http://") + cookies[i].domain + cookies[i].path,
                     name: cookies[i].name
@@ -349,25 +321,17 @@ extension_api.webRequest.onBeforeSendHeaders.addListener(function (details)
     }
 
     // check for blocked regular expression: domain enabled, match regex, block on an internal or external regex
-    for (let domain in blockedRegexes)
-    {
-        if ((isSiteEnabled({url: '.' + domain}) || isSiteEnabled({url: header_referer})) && details.url.match(blockedRegexes[domain]))
-        {
+    for (let domain in blockedRegexes) {
+        if ((isSiteEnabled({url: '.' + domain}) || isSiteEnabled({url: header_referer})) && details.url.match(blockedRegexes[domain])) {
             // allow BG paywall-script to set cookies in homepage/sections (else no article-text)
-            if (details.url.indexOf(domain) !== -1 || header_referer.indexOf(domain) !== -1)
-            {
+            if (details.url.indexOf(domain) !== -1 || header_referer.indexOf(domain) !== -1) {
                 if (details.url.indexOf('meter.bostonglobe.com/js/') !== -1 && (header_referer === 'https://www.bostonglobe.com/'
-                    || header_referer.indexOf('/?p1=BGHeader_') !== -1 || header_referer.indexOf('/?p1=BGMenu_') !== -1))
-                {
-                    extension_api.webRequest.handlerBehaviorChanged(function ()
-                    {
+                    || header_referer.indexOf('/?p1=BGHeader_') !== -1 || header_referer.indexOf('/?p1=BGMenu_') !== -1)) {
+                    extension_api.webRequest.handlerBehaviorChanged(function () {
                     });
                     break;
-                }
-                else if (header_referer.indexOf('theglobeandmail.com') !== -1 && !(header_referer.indexOf('/article-') !== -1))
-                {
-                    extension_api.webRequest.handlerBehaviorChanged(function ()
-                    {
+                } else if (header_referer.indexOf('theglobeandmail.com') !== -1 && !(header_referer.indexOf('/article-') !== -1)) {
+                    extension_api.webRequest.handlerBehaviorChanged(function () {
                     });
                     break;
                 }
@@ -376,8 +340,7 @@ extension_api.webRequest.onBeforeSendHeaders.addListener(function (details)
         }
     }
 
-    if (!isSiteEnabled(details))
-    {
+    if (!isSiteEnabled(details)) {
         return;
     }
 
@@ -387,28 +350,20 @@ extension_api.webRequest.onBeforeSendHeaders.addListener(function (details)
     let setReferer = false;
 
     // if referer exists, set it to google
-    requestHeaders = requestHeaders.map(function (requestHeader)
-    {
-        if (requestHeader.name === 'Referer')
-        {
-            if (details.url.indexOf("cooking.nytimes.com/api/v1/users/bootstrap") !== -1)
-            {
+    requestHeaders = requestHeaders.map(function (requestHeader) {
+        if (requestHeader.name === 'Referer') {
+            if (details.url.indexOf("cooking.nytimes.com/api/v1/users/bootstrap") !== -1) {
                 // this fixes images not being loaded on cooking.nytimes.com main page
                 // referrer has to be *nytimes.com otherwise returns 403
                 requestHeader.value = 'https://cooking.nytimes.com';
-            }
-            else if (details.url.indexOf("wsj.com") !== -1 || details.url.indexOf("ft.com") !== -1 || details.url.indexOf("fd.nl") !== -1)
-            {
+            } else if (details.url.indexOf("wsj.com") !== -1 || details.url.indexOf("ft.com") !== -1 || details.url.indexOf("fd.nl") !== -1) {
                 requestHeader.value = 'https://www.facebook.com/';
-            }
-            else
-            {
+            } else {
                 requestHeader.value = 'https://www.google.com/';
             }
             setReferer = true;
         }
-        if (requestHeader.name === 'User-Agent')
-        {
+        if (requestHeader.name === 'User-Agent') {
             useUserAgentMobile = requestHeader.value.toLowerCase().includes("mobile");
         }
 
@@ -416,17 +371,13 @@ extension_api.webRequest.onBeforeSendHeaders.addListener(function (details)
     });
 
     // otherwise add it
-    if (!setReferer)
-    {
-        if (details.url.indexOf("wsj.com") !== -1 || details.url.indexOf("ft.com") !== -1 || details.url.indexOf("fd.nl") !== -1)
-        {
+    if (!setReferer) {
+        if (details.url.indexOf("wsj.com") !== -1 || details.url.indexOf("ft.com") !== -1 || details.url.indexOf("fd.nl") !== -1) {
             requestHeaders.push({
                 name: 'Referer',
                 value: 'https://www.facebook.com/'
             });
-        }
-        else
-        {
+        } else {
             requestHeaders.push({
                 name: 'Referer',
                 value: 'https://www.google.com/'
@@ -435,13 +386,11 @@ extension_api.webRequest.onBeforeSendHeaders.addListener(function (details)
     }
 
     // override User-Agent to use Googlebot
-    let useGoogleBot = use_google_bot.filter(function (item)
-    {
+    let useGoogleBot = use_google_bot.filter(function (item) {
         return typeof item == 'string' && details.url.indexOf(item) > -1;
     }).length > 0;
 
-    if (useGoogleBot)
-    {
+    if (useGoogleBot) {
         requestHeaders.push({
             "name": "User-Agent",
             "value": useUserAgentMobile ? userAgentMobile : userAgentDesktop
@@ -453,32 +402,25 @@ extension_api.webRequest.onBeforeSendHeaders.addListener(function (details)
     }
 
     // remove cookies before page load
-    requestHeaders = requestHeaders.map(function (requestHeader)
-    {
-        for (let siteIndex in allow_cookies)
-        {
-            if (details.url.indexOf(allow_cookies[siteIndex]) !== -1)
-            {
+    requestHeaders = requestHeaders.map(function (requestHeader) {
+        for (let siteIndex in allow_cookies) {
+            if (details.url.indexOf(allow_cookies[siteIndex]) !== -1) {
                 return requestHeader;
             }
         }
-        if (requestHeader.name === 'Cookie')
-        {
+        if (requestHeader.name === 'Cookie') {
             requestHeader.value = '';
         }
         return requestHeader;
     });
 
-    if (tabId !== -1)
-    {
+    if (tabId !== -1) {
         // run contentScript inside tab
         extension_api.tabs.executeScript(tabId, {
             file: 'contentScript.js',
             runAt: 'document_start'
-        }, function (res)
-        {
-            if (extension_api.runtime.lastError || res[0])
-            {
+        }, function (res) {
+            if (extension_api.runtime.lastError || res[0]) {
 
             }
         });
@@ -490,39 +432,31 @@ extension_api.webRequest.onBeforeSendHeaders.addListener(function (details)
 }, extraInfoSpec);
 
 // remove cookies after page load
-extension_api.webRequest.onCompleted.addListener(function (details)
-{
-    for (let domainIndex in remove_cookies)
-    {
+extension_api.webRequest.onCompleted.addListener(function (details) {
+    for (let domainIndex in remove_cookies) {
         let domainVar = remove_cookies[domainIndex];
-        if (!enabledSites.includes(domainVar) || details.url.indexOf(domainVar) === -1)
-        {
+        if (!enabledSites.includes(domainVar) || details.url.indexOf(domainVar) === -1) {
             continue; // don't remove cookies
         }
-        extension_api.cookies.getAll({domain: domainVar}, function (cookies)
-        {
-            for (let i = 0; i < cookies.length; i++)
-            {
+        extension_api.cookies.getAll({domain: domainVar}, function (cookies) {
+            for (let i = 0; i < cookies.length; i++) {
                 let cookie = {
                     url: (cookies[i].secure ? "https://" : "http://") + cookies[i].domain + cookies[i].path,
                     name: cookies[i].name,
                     storeId: cookies[i].storeId
                 };
                 // .firstPartyDomain = undefined on Chrome (doesn't support it)
-                if (cookies[i].firstPartyDomain !== undefined)
-                {
+                if (cookies[i].firstPartyDomain !== undefined) {
                     cookie.firstPartyDomain = cookies[i].firstPartyDomain;
                 }
                 let cookie_domain = cookies[i].domain;
                 let rc_domain = cookie_domain.replace(/^(\.?www\.|\.)/, '');
                 // hold specific cookie(s) from remove_cookies domains
-                if ((rc_domain in remove_cookies_select_hold) && remove_cookies_select_hold[rc_domain].includes(cookies[i].name))
-                {
+                if ((rc_domain in remove_cookies_select_hold) && remove_cookies_select_hold[rc_domain].includes(cookies[i].name)) {
                     continue; // don't remove specific cookie
                 }
                 // drop only specific cookie(s) from remove_cookies domains
-                if ((rc_domain in remove_cookies_select_drop) && !(remove_cookies_select_drop[rc_domain].includes(cookies[i].name)))
-                {
+                if ((rc_domain in remove_cookies_select_drop) && !(remove_cookies_select_drop[rc_domain].includes(cookies[i].name))) {
                     continue; // only remove specific cookie
                 }
                 extension_api.cookies.remove(cookie);
@@ -534,15 +468,13 @@ extension_api.webRequest.onCompleted.addListener(function (details)
 });
 
 // Google Analytics to track DAU (Chrome only)
-function init_GA()
-{
+function init_GA() {
     let _gaq = [];
     _gaq.push(['_setAccount', 'UA-69824169-2']);
     _gaq.push(['_gat._anonymizeIp']);
     _gaq.push(['_trackPageview']);
 
-    (function ()
-    {
+    (function () {
         let ga = document.createElement('script');
         ga.type = 'text/javascript';
         ga.async = true;
@@ -552,21 +484,17 @@ function init_GA()
     })();
 }
 
-function isSiteEnabled(details)
-{
-    return enabledSites.some(function (enabledSite)
-    {
+function isSiteEnabled(details) {
+    return enabledSites.some(function (enabledSite) {
         let useSite = (details.url.indexOf("." + enabledSite) !== -1 || details.url.indexOf("/" + enabledSite) !== -1);
-        if (enabledSite in restrictions)
-        {
+        if (enabledSite in restrictions) {
             return useSite && details.url.match(restrictions[enabledSite]);
         }
         return useSite;
     });
 }
 
-function getParameterByName(name, url)
-{
+function getParameterByName(name, url) {
     if (!url) url = window.location.href;
     name = name.replace(/[\[\]]/g, '\\$&');
     let regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
@@ -576,7 +504,6 @@ function getParameterByName(name, url)
     return decodeURIComponent(results[2].replace(/\+/g, ' '));
 }
 
-function stripQueryStringAndHashFromPath(url)
-{
+function stripQueryStringAndHashFromPath(url) {
     return url.split("?")[0].split("#")[0];
 }
