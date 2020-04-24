@@ -1,5 +1,5 @@
 // Saves options to extension_api.storage
-function save_options() {
+function save_options () {
   var gh_url = document.getElementById('bypass_sites').value;
   var inputEls = document.querySelectorAll('#bypass_sites input');
 
@@ -25,7 +25,7 @@ function save_options() {
 
 // Restores checkbox input states using the preferences
 // stored in extension_api.storage.
-function renderOptions() {
+function renderOptions () {
   extension_api.storage.sync.get({
     sites: {}
   }, function (items) {
@@ -43,7 +43,7 @@ function renderOptions() {
       inputEl.dataset.key = key;
       inputEl.dataset.value = value;
       inputEl.checked = (key in sites) || (key.replace(/\s\(.*\)/, '')
-          in sites);
+        in sites);
 
       labelEl.appendChild(inputEl);
       labelEl.appendChild(document.createTextNode(' ' + key));
@@ -52,14 +52,14 @@ function renderOptions() {
   });
 }
 
-function selectAll() {
+function selectAll () {
   var inputEls = Array.from(document.querySelectorAll('input'));
   inputEls.forEach(function (inputEl) {
     inputEl.checked = true;
   });
 }
 
-function selectNone() {
+function selectNone () {
   var inputEls = Array.from(document.querySelectorAll('input'));
   inputEls.forEach(function (inputEl) {
     inputEl.checked = false;
